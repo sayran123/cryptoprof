@@ -1,3 +1,11 @@
+#!/bin/sh
+':' //; exec "$(command -v nodejs || command -v node)" "$0" "$@"
+
+/**
+ * Shebang taken from:
+ * https://unix.stackexchange.com/questions/65235/universal-node-js-shebang
+ */
+
 const async = require('async');
 const Table = require('cli-table');
 const Ganache = require('ganache-core');
