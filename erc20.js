@@ -48,12 +48,12 @@ function deploy(
     let err = null;
     const deployLog = log.child({ step: `Deploy ${selector}` });
 
-    log.debug(`Compiling contract ${selector} at ${contractPath}`);
+    deployLog.debug(`Compiling contract ${selector} at ${contractPath}`);
     const compilationResult = compile(contractPath);
     const compiledContract = _.get(compilationResult, ['contracts', selector]);
     if (!compiledContract) {
         err = new Error(`Contract not found: ${selector} at ${contractPath}`);
-        deployLog.error(err);
+        deployLog.error({ err, compilationResult });
         return deploymentCallback(err);
     }
 
@@ -75,90 +75,47 @@ function deploy(
         return deploymentCallback(err);
     }
 
-    const Contract = web3Client.eth.contract(JSON.parse(contractInterface));
+    const Contract = new web3Client.eth.Contract(JSON.parse(contractInterface));
 
-    return async.waterfall([
-        // Estimate the amount of gas required to deploy the contract
-        (callback) => {
-            deployLog.debug({ msg: 'Estimating gas' });
-
-            return web3Client.eth.estimateGas(
-                { data: contractBytecode },
-                callback,
+    const results = {};
+    function registerResult(key, value) {
+        results[key] = value;
+        if (results.contractInstance && results.receipt) {
+            deploymentCallback(
+                null,
+                results.contractInstance,
+                { deployment: results.receipt.gasUsed },
             );
+        }
+
+        return null;
+    }
+
+    const deployment = Contract.deploy(
+        {
+            data: contractBytecode,
+            arguments: args,
         },
-        // Deploy contract from specified deployer address with twice the gas estimate provided for
-        // deployment
-        (gasEstimate, callback) => {
-            deployLog.debug({
-                msg: 'Deploying contract',
-                args,
-                deployer,
-            });
+    );
 
-            return Contract.new(
-                ...args,
-                {
-                    from: deployer,
-                    data: contractBytecode,
-                    gas: 2 * gasEstimate,
-                },
-                (creationErr, contractInstance) => {
-                    if (creationErr) {
-                        deployLog.error(creationErr);
-                        return callback(creationErr);
-                    }
+    deployment.estimateGas((estimationErr, gasAmount) => {
+        if (estimationErr) {
+            return deploymentCallback(estimationErr);
+        }
 
-                    if (contractInstance.address) {
-                        const transactionHash = _.get(contractInstance, 'transactionHash');
+        return deployment.send({
+            from: deployer,
+            gas: 2 * gasAmount,
+        }).once(
+            'receipt',
+            receipt => registerResult('receipt', receipt),
+        ).on(
+            'error',
+            deploymentCallback,
+        ).then(contractInstance => registerResult('contractInstance', contractInstance));
+    });
 
-                        if (!transactionHash) {
-                            err = new Error(`Could not find transaction hash after deployment to ${contractInstance.address}`);
-                            deployLog.error(err);
-                            return callback(err);
-                        }
-
-                        return callback(null, contractInstance, transactionHash);
-                    }
-
-                    return null;
-                },
-            );
-        },
-        // Wait for transaction receipt and return the contract instance along with gasUsed (from
-        // receipt) to final callback
-        (contractInstance, transactionHash, callback) => {
-            deployLog.debug({
-                msg: 'Waiting for transaction receipt',
-                transactionHash,
-            });
-
-            // The doUntil loop polls for transaction receipt
-            return async.doUntil(
-                (receiptCallback) => {
-                    deployLog.debug('Looking for transaction receipt');
-                    return web3Client.eth.getTransactionReceipt(transactionHash, receiptCallback);
-                },
-                // Check that receipt is not falsey (while transaction is still pending, receipt
-                // will be null)
-                receipt => receipt,
-                (receiptErr, receipt) => {
-                    if (receiptErr) {
-                        deployLog.error(receiptErr);
-                        return callback(receiptErr);
-                    }
-
-                    const gasUsed = _.get(receipt, 'gasUsed');
-                    if (!gasUsed) {
-                        err = new Error('Transaction receipt did not contain gasUsed');
-                        return callback(err);
-                    }
-
-                    return callback(null, contractInstance, { deployment: gasUsed });
-                },
-            );
-        },
-    ], deploymentCallback);
+    return null;
 }
 
 
@@ -171,9 +128,9 @@ function deploy(
  * enough funds on it for deployment
  * @param {string} sender - Wallet that should be used to deploy the contract (should be available
  * on web3 provider and should have sufficient funds)
- * @param {string} method - Name of method to call
- * @param {Any[]} args - Array of arguments to the given contract method -- should be passed as
- * individual arguments to contractMethodCaller
+ * @param {string} methodName - Name of method to call
+ * @param {Any[]} args - Arguments to the given contract method -- should be passed as individual
+ * arguments to contractMethodCaller
  *
  * @returns Function which executes the contract method call and measures the amount of gas used
  */
@@ -189,69 +146,25 @@ function contractMethodCalculator(web3Client, sender, methodName, ...args) {
     function gasForCall(contractInstance, gasTracker, calculationCallback) {
         calculateLog.debug('Calculator called');
 
-        return async.waterfall([
-            (callback) => {
-                calculateLog.debug('Calculator estimating gas');
-                return contractInstance[methodName].estimateGas(...args, callback);
-            },
-            (gasEstimate, callback) => {
-                calculateLog.debug('Sending transaction');
-                return contractInstance[methodName].sendTransaction(
-                    ...args,
-                    {
-                        from: sender,
-                        gas: 2 * gasEstimate,
-                    },
-                    callback,
-                );
-            },
-            (transactionHash, callback) => {
-                calculateLog.debug({ msg: 'Received transaction hash', transactionHash });
-                let err = null;
-
-                return async.doUntil(
-                    (receiptCallback) => {
-                        calculateLog.debug('Looking for transaction receipt');
-                        return web3Client.eth.getTransactionReceipt(
-                            transactionHash,
-                            receiptCallback,
-                        );
-                    },
-                    // Check that receipt is not falsey (while transaction is still pending, receipt
-                    // will be null)
-                    receipt => receipt,
-                    (receiptErr, receipt) => {
-                        if (receiptErr) {
-                            calculateLog.error(receiptErr);
-                            return callback(receiptErr);
-                        }
-
-                        calculateLog.debug('Receipt received');
-
-                        const gasUsed = _.get(receipt, 'gasUsed');
-                        if (!gasUsed) {
-                            err = new Error('Transaction receipt did not contain gasUsed');
-                            calculateLog.error(err);
-                            return callback(err);
-                        }
-
-                        calculateLog.debug({ msg: 'Calculated gas used', gasUsed });
-
-                        return callback(null, gasUsed);
-                    },
-                );
-            },
-        ], (calculationErr, gasUsed) => {
-            if (calculationErr) {
-                calculateLog.error(calculationErr);
-                return calculationCallback(calculationErr);
+        return contractInstance.methods[methodName](...args).estimateGas((err, gasEstimate) => {
+            if (err) {
+                return calculationCallback(err);
             }
 
-            calculateLog.debug({ msg: 'Adding used gas to gas tracker', gasTracker });
-            _.set(gasTracker, methodName, gasUsed);
-            calculateLog.debug({ msg: 'Gas tracked', gasTracker });
+            return contractInstance.methods[methodName](...args).send(
+                {
+                    from: sender,
+                    gas: 2 * gasEstimate,
+                },
+            ).once('receipt', (receipt) => {
+                calculateLog.debug({ msg: 'Receipt received' });
 
-            return calculationCallback(null, contractInstance, gasTracker);
+                const newGasTracker = {
+                    ...gasTracker,
+                };
+                newGasTracker[methodName] = receipt.gasUsed;
+                return calculationCallback(null, contractInstance, newGasTracker);
+            }).on('error', calculationCallback);
         });
     }
 
@@ -259,7 +172,8 @@ function contractMethodCalculator(web3Client, sender, methodName, ...args) {
 }
 
 /**
- * Returns gas estimates for each of the following (ERC20) methods on the specified ERC20 contract:
+ * Returns gas estimates for deployment as well as each of the following (ERC20) methods on the
+ * specified ERC20 contract:
  * 1. totalSupply
  * 2. balanceOf
  * 3. transfer
@@ -267,6 +181,99 @@ function contractMethodCalculator(web3Client, sender, methodName, ...args) {
  * 5. approve
  * 6. allowance
  *
- * @param {string}
+ * @param {Object} web3Client - Web3 object that can make web3 calls against some provider
+ * @param {string[]} unlockedWallets - Collection of unlocked wallets available on the web3 provider
+ * @param {Object} contractSpec - Specifies the contract to deploy
+ * @param {string} contractSpec.contractPath - Path to solidity file defining the contract
+ * @param {string} contractSpec.selector - Name of contract in solidity file
+ * @param {string[]} contractSpec.args - Arguments to contract constructor
+ *
+ * @callback profileCallback Will be called with (err, gasTracker). If the profiling completed
+ * successfully, err will be null and gasTracker will be an object containing contract operations as
+ * keys and the amount of gas spent on those operations as values. Otherwise, err will be an error
+ * object describing the nature of the failure in profiling.
  */
-function profile() {}
+function profile(
+    web3Client,
+    owner,
+    recipient,
+    {
+        contractPath,
+        selector,
+        args,
+    },
+    profileCallback,
+) {
+    const profileLog = log.child({ step: `Profile ${selector}` });
+
+    return async.waterfall([
+        callback => deploy(
+            web3Client,
+            owner,
+            {
+                contractPath,
+                selector,
+                args,
+            },
+            callback,
+        ),
+        contractMethodCalculator(
+            web3Client,
+            owner,
+            'totalSupply',
+        ),
+        contractMethodCalculator(
+            web3Client,
+            owner,
+            'balanceOf',
+            owner,
+        ),
+        contractMethodCalculator(
+            web3Client,
+            owner,
+            'transfer',
+            recipient,
+            100,
+        ),
+        contractMethodCalculator(
+            web3Client,
+            owner,
+            'approve',
+            owner,
+            47,
+        ),
+        contractMethodCalculator(
+            web3Client,
+            owner,
+            'allowance',
+            owner,
+            owner,
+        ),
+        contractMethodCalculator(
+            web3Client,
+            owner,
+            'transferFrom',
+            owner,
+            recipient,
+            42,
+        ),
+    ], (err, contractInstance, gasTracker) => {
+        if (err) {
+            profileLog.error(err);
+        }
+
+        profileLog.debug({
+            msg: 'Profile complete',
+            gasTracker,
+        });
+
+        return profileCallback(err, gasTracker);
+    });
+}
+
+
+module.exports = {
+    deploy,
+    contractMethodCalculator,
+    profile,
+};
