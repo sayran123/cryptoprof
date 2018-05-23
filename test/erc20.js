@@ -72,9 +72,7 @@ describe('Consensys ERC20 deployment', () => {
                 args,
             },
             (err, contractInstance, gasTracker) => {
-                console.log('xylophone');
                 if (err) {
-                    console.log('jalatarangam');
                     return done(err);
                 }
 
@@ -84,7 +82,6 @@ describe('Consensys ERC20 deployment', () => {
                 assert(gasTracker.deployment);
                 assert(gasTracker.deployment > 0);
 
-                console.log('drumstick');
                 return done();
             },
         );
