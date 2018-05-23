@@ -4,6 +4,11 @@ Gas profiler for Ethereum smart contracts
 
 - - -
 
+## What is this?
+
+[Rationale](./doc/rationale.md)
+
+
 ## Getting started
 
 ### Requirements
