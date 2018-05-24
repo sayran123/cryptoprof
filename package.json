@@ -1,0 +1,46 @@
+{
+  "name": "cryptoprof",
+  "version": "0.1.0",
+  "description": "Gas profiler for Ethereum smart contracts",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/doc-ai/cryptoprof.git"
+  },
+  "keywords": [
+    "ethereum",
+    "contracts",
+    "smart-contracts",
+    "gas",
+    "profile"
+  ],
+  "author": "neeraj@doc.ai",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/doc-ai/cryptoprof/issues"
+  },
+  "bin": {
+    "cryptoprof": "index.js"
+  },
+  "homepage": "https://github.com/doc-ai/cryptoprof#readme",
+  "dependencies": {
+    "async": "^2.6.0",
+    "bunyan": "^1.8.12",
+    "cli-table": "^0.3.1",
+    "ganache-core": "^2.1.0",
+    "lodash": "^4.17.10",
+    "prettier": "^1.12.1",
+    "solc": "^0.4.24",
+    "web3": "^1.0.0-beta.34",
+    "yargs": "^11.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^4.19.1",
+    "eslint-config-airbnb-base": "^12.1.0",
+    "eslint-plugin-import": "^2.12.0",
+    "mocha": "^5.2.0"
+  }
+}
