@@ -6,7 +6,18 @@ Gas profiler for Ethereum smart contracts
 
 ## What is this?
 
-[Rationale](./doc/rationale.md)
+`cryptoprof` profiles the gas usage of smart contracts. It can help with:
+
++ debugging smart contracts
+
++ evaluating dapp feasibility
+
++ evaluating dapp security
+
++ choosing implementations of smart contract standards
+
+You can find more information about these use cases in  the [rationale](./doc/rationale.md)
+document.
 
 
 ## Getting started
@@ -67,7 +78,7 @@ This should yield a table similar to the one in the following image:
 ![cryptoprof sample](./doc/cryptoprof-sample.png)
 
 
-### Contributions
+## Contributions
 
 If you'd like to contribute to `cryptoprof`, just open up a pull request. The guidelines are very
 light:
@@ -80,4 +91,4 @@ you are ready. Give your pull request an informative description.
 1. Add one of the maintainers of this repository ([nkashy1](https://github.com/nkashy1) for now)
 as a reviewer on the pull request.
 
-Also, feel free to create issues as you find them. Thank you in advance!
+Also, feel free to create issues as you find them. Your contributions are very much welcome.
