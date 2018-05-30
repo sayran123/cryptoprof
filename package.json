@@ -1,6 +1,6 @@
 {
   "name": "cryptoprof",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Gas profiler for Ethereum smart contracts",
   "main": "index.js",
   "scripts": {
