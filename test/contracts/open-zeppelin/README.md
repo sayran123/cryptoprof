@@ -12,3 +12,8 @@ These solidity files were downloaded from https://github.com/OpenZeppelin/openze
 + [ERC20Basic.sol](https://github.com/OpenZeppelin/openzeppelin-solidity/blob/e3f866c98241c2ceffd5dc373aebf6b1dce57cc4/contracts/token/ERC20/ERC20Basic.sol)
 
 + [SafeMath.sol](https://github.com/OpenZeppelin/openzeppelin-solidity/blob/e3f866c98241c2ceffd5dc373aebf6b1dce57cc4/contracts/math/SafeMath.sol)
+
+- - -
+
+[test.sol](./test.sol) contains a `Test` contract which can be used to profile the OpenZeppelin
+`StandardToken` implementation.
