@@ -127,3 +127,79 @@ describe('Consensys ERC20 profile', () => {
         );
     });
 });
+
+
+describe('OpenZeppelin ERC20 deployment', () => {
+    const configuration = {};
+
+    const contractPath = path.resolve(__dirname, './contracts/open-zeppelin/test.sol');
+    const selector = `${contractPath}:Test`;
+    const args = [1200000];
+
+    before(() => {
+        setUp(configuration);
+    });
+
+    after(done => configuration.provider.close(done));
+
+    it('should successfully deploy', function deploymentTest(done) {
+        this.timeout(10000);
+        return deploy(
+            configuration.web3Client,
+            configuration.accountAddresses[0],
+            {
+                contractPath,
+                selector,
+                args,
+            },
+            (err, contractInstance, gasTracker) => {
+                if (err) {
+                    return done(err);
+                }
+
+                assert(contractInstance);
+                assert(gasTracker);
+
+                assert(gasTracker.deployment);
+                assert(gasTracker.deployment > 0);
+
+                return done();
+            },
+        );
+    });
+});
+
+describe('OpenZeppelin ERC20 profile', () => {
+    const configuration = {};
+
+    const contractPath = path.resolve(__dirname, './contracts/open-zeppelin/test.sol');
+    const selector = `${contractPath}:Test`;
+    const args = [1200000];
+
+    before(() => {
+        setUp(configuration);
+    });
+
+    after(done => configuration.provider.close(done));
+
+    it('should produce an object which tracks the gas used to call ERC20 methods', function profileTest(done) {
+        this.timeout(10000);
+        return profile(
+            configuration.web3Client,
+            configuration.accountAddresses[0],
+            configuration.accountAddresses[1],
+            {
+                contractPath,
+                selector,
+                args,
+            },
+            (err, gasTracker) => {
+                if (err) {
+                    return done(err);
+                }
+
+                return done();
+            },
+        );
+    });
+});
