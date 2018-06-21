@@ -43,9 +43,13 @@ if (require.main === module) {
             type: 'array',
             default: [],
         })
+        .option('json', {
+            describe: 'Emit output as json',
+            default: false,
+        })
         .help();
 
-    const { contractType, contractSpecs } = yargs.argv;
+    const { contractType, contractSpecs, json } = yargs.argv;
 
     if (!CONTRACT_TYPES[contractType]) {
         throw new Error(`Invalid contract type: ${contractType}`);
@@ -84,15 +88,22 @@ if (require.main === module) {
             const items = Object.keys(results[0]).sort();
 
             const table = new Table({ head: ['Gas spent per contract method'].concat(items) });
+            var jsResult = {};
             results.forEach((gasTracker, index) => {
                 const row = [];
                 items.forEach(item => row.push(gasTracker[item]));
                 const prettyRow = {};
                 prettyRow[contractSpecObjects[index].selector] = row;
                 table.push(prettyRow);
+
+                jsResult[contractSpecObjects[index].selector] = gasTracker;
             });
 
-            console.log(table.toString());
+            if(json) {
+                console.log(JSON.stringify(jsResult));
+            } else {
+                console.log(table.toString());
+            }
         },
     );
 }
