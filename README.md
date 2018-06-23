@@ -58,6 +58,45 @@ this from the directory containing that package by running:
 ./node_modules/.bin/cryptoprof --help
 ```
 
+#### Docker image
+
+Alternatively, you can use the [`Dockerfile`](./Dockerfile) provided in this repository to run the
+profiler. Build the image using:
+
+```
+docker build -t cryptoprof .
+```
+
+You can test `cryptoprof` on the test contracts (which are available within the container) using:
+
+```
+docker run cryptoprof -t erc20 \
+    --contract-specs test/contracts/consensys/EIP20.sol:EIP20,1200000,ConsensysERC20,1,CON \
+                     test/contracts/consensys/CrappyEIP20.sol:EIP20,1200000,CrappyERC20Token,1,CRP
+```
+
+To run this against your own contracts, simply bind mount those contracts into the container. For
+example, from project root:
+
+```
+docker run -v $(pwd)/test/contracts/consensys/:/opt cryptoprof -t erc20 \
+    --contract-specs /opt/EIP20.sol:EIP20,1200000,ConsensysERC20,1,CON \
+                     /opt/CrappyEIP20.sol:EIP20,1200000,CrappyERC20Token,1,CRP
+```
+
+If you have access to `make` on your system, you can use the provided [`Makefile`](./Makefile) to
+build the docker image:
+
+```
+make build
+```
+
+You can also profile the test contracts using:
+
+```
+make run
+```
+
 
 ### Using the profiler
 
