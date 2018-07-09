@@ -10,6 +10,15 @@ const Web3 = require('web3');
 
 const { deploy, contractMethodCalculator, profile } = require('../erc20.js');
 
+// TEST_TIMEOUT - Environment variable for max timeout on individual mocha tests
+// Default value 10000
+// Must be positive integer if defined
+// Error thrown if not
+const testTimeout = parseInt(process.env.TEST_TIMEOUT || '10000', 10);
+if (isNaN(testTimeout) || testTimeout<=0) {
+    throw new Error(`TEST_TIMEOUT must be positive integer -- current value: TEST_TIMEOUT=${process.env.TEST_TIMEOUT}`);
+}
+
 /**
  * Sets up a web3 client and related objects for use in each test.
  * Does this by populating the `configuration` object, defined in the scope of each test case.
@@ -62,7 +71,7 @@ describe('Consensys ERC20 deployment', () => {
     after(done => configuration.provider.close(done));
 
     it('should successfully deploy', function deploymentTest(done) {
-        this.timeout(10000);
+        this.timeout(testTimeout);
         return deploy(
             configuration.web3Client,
             configuration.accountAddresses[0],
@@ -107,7 +116,7 @@ describe('Consensys ERC20 profile', () => {
     after(done => configuration.provider.close(done));
 
     it('should produce an object which tracks the gas used to call ERC20 methods', function profileTest(done) {
-        this.timeout(10000);
+        this.timeout(testTimeout);
         return profile(
             configuration.web3Client,
             configuration.accountAddresses[0],
@@ -143,7 +152,7 @@ describe('OpenZeppelin ERC20 deployment', () => {
     after(done => configuration.provider.close(done));
 
     it('should successfully deploy', function deploymentTest(done) {
-        this.timeout(10000);
+        this.timeout(testTimeout);
         return deploy(
             configuration.web3Client,
             configuration.accountAddresses[0],
@@ -183,7 +192,7 @@ describe('OpenZeppelin ERC20 profile', () => {
     after(done => configuration.provider.close(done));
 
     it('should produce an object which tracks the gas used to call ERC20 methods', function profileTest(done) {
-        this.timeout(10000);
+        this.timeout(testTimeout);
         return profile(
             configuration.web3Client,
             configuration.accountAddresses[0],
