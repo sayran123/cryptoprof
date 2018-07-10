@@ -66,6 +66,11 @@ if (require.main === module) {
 
     const profiler = CONTRACT_TYPES[contractType];
     const contractSpecObjects = contractSpecs.map(parseContractSpec);
+    
+    if(contractSpecObjects[0]==null){
+        throw new Error('Missing flag in front of contract-specs, use --contract-specs ./contract_location ...')
+    }
+    
     async.map(
         contractSpecObjects,
         (spec, callback) => profiler(
